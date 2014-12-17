@@ -1,5 +1,6 @@
 ## # Building a mammal tree
 ## Load tree and data into R
+#setwd("~/repos/phylopredict/R/")
 setwd("./MammalTree")
 require(ape)
 require(aRbor)
@@ -7,7 +8,7 @@ require(devtools)
 require(bayou)
 #setwd("~/repos/bmr/R/MammalTree")
 require(devtools)
-#install_github("rotl", user="fmichonneau")
+#install_github("fmichonneau/rotl")
 require(rncl)
 require(rotl)
 require(rjson)
@@ -27,9 +28,9 @@ taxalist <- tree$tip.label
 
 ## # Querying OpenTree
 registerDoParallel(cores=12)
+options("scipen"=100, "digits"=4)
 tax <- foreach(i=1:length(taxalist)) %dopar% try(rotl::tnrs_match_names(taxalist[i], context="Mammals"))
 tax <- do.call(rbind, tax)
-options("scipen"=100, "digits"=4)
 genspec <- unname(sapply(tax[,2], function(x) paste(strsplit(x, split=" ")[[1]][1:2],collapse=" ")))
 tax_unique <- tax[!duplicated(genspec),]
 ottids <- as.character(tax_unique$ott_id) 
@@ -116,9 +117,9 @@ phypd8 <- PATHd8.phylo(tr$scion, tr$table, base = ".tmp_PATHd8", rm = FALSE)
 #                              )
 meredith <- read.tree("../../data/meredith-mammals.tre")
 meredithotts <- rotl::tnrs_match_names(meredith$tip.label, context_name = "Mammals")$ott_id
-meredithtax <- gbresolve(target$tip.label)
+meredithtax <- gbresolve(phypd8$tip.label)
 
-meredithCalibrations <- congruify.phylo(meredith, finalTree, meredithtax, tol=0, scale=NA)$calibrations
+meredithCalibrations <- congruify.phylo(meredith, phypd8, meredithtax, tol=0, scale=NA)$calibrations
 
 calibrations <- rbind(calibrations, meredithCalibrations)
 tr <- replaceHashes(phypd8, calibrations)
@@ -129,74 +130,11 @@ finalTree <- PATHd8.phylo(tr$scion, rcalibrations, base = ".tmp_PATHd8", rm = FA
 finalTree <- reorder(finalTree, "postorder")
 
 BETree <- reorder(tr$scion, "postorder")
-#plotTree(BETree, colors='red', ftype="off")
 
-#plot(c(0,0), c(0, 0), type="n", xlim=c(0, 170), ylim=c(0, 6), xaxt="n", yaxt="n",xlab="", ylab="", bty="n")
-rsBETree <- BETree
-rsBETree$edge.length <- rsBETree$edge.length/max(branching.times(rsBETree))
+par(mfrow=c(1,2))
+plot(finalTree, show.tip.label=FALSE)
+abline(v=max(nodeHeights(finalTree))-65, lty=2)
+plot(BETree, show.tip.label=FALSE)
+abline(v=max(nodeHeights(BETree))-65, lty=2)
 
-rsfTree <- finalTree
-rsfTree$edge.length <- rsfTree$edge.length/max(branching.times(rsfTree))
-
-pdf("trees.pdf", height=25)
-#plot(BETree, cex=0.25)
-#abline(v=c(166.2-seq(0, 200, 50)), col="red", lty=2)
-#abline(v=166.2-65, col="blue", lty=2)
-#plot(finalTree, cex=0.25)
-nh2 <- max(nodeHeights(finalTree))
-#abline(v=c(nh2-seq(0, 200, 50)), col="red", lty=2)
-#abline(v=nh2-65, col="blue", lty=2)
-plotTree(rsBETree, color="red", ftype="off")
-plotTree(rsfTree, add=TRUE, ftype="off",lty=2, ftype="off")
-plot(BETree,edge.color="black", cex=0.25, x.lim=c(-45,180))
-abline(v=c(166.2-seq(0, 200, 50)), col="red", lty=2)
-abline(v=166.2-65, col="blue", lty=2)
-plot(finalTree,edge.color="black", cex=0.25, x.lim=c(0,225))
-abline(v=c(nh2-seq(0, 200, 50)), col="red", lty=2)
-abline(v=nh2-65, col="blue", lty=2)
-dev.off()
-simpleCap <- function(x) {
-  s <- strsplit(x, " ")[[1]]
-  paste(toupper(substring(s, 1,1)), substring(s, 2),
-        sep="", collapse=" ")
-}
-
-## Have to match tree back with data....
-ottids
-tipotts <- list(sapply(synth_tree$tip.label, function(x) strsplit(x,"_ott")[[1]][2]), sapply(synth_tree$tip.label, function(x) strsplit(x,"_ott")[[1]][1]))
-datnames <- unname(sapply(tax[match(tipotts[[1]][match(finalTree$tip.label, tipotts[[2]])], ottids),1], simpleCap))
-newdat <- dat[datnames,]
-rownames(newdat) <- finalTree$tip.label
-
-td <- make.treedata(finalTree, newdat)
-saveRDS(td, file = "../../output/data/newmammals.rds")
-
-pdf("newtrees.pdf", height=20)
-plot(finalTree, cex=0.4)
-nn <- sapply(1:nrow(BE_cals), function(x) getMRCA(target, as.character(BE_cals[x,4:5])))
-nodelabels(node = nn, pch=21, bg="green", cex=0.8)
-
-nn <- sapply(1:nrow(calibrations), function(x) getMRCA(target, as.character(calibrations[x,4:5])))
-nodelabels(node = nn, pch=21, bg="red", cex=0.5)
-plotTree(reorder(tree,"cladewise"), lwd=2, xlim=c(0,250), fsize=0.3)
-abline(v=c(166.2-seq(0, 200, 50)), col="red", lty=2)
-abline(v=166.2-65, col="blue", lty=2)
-plotTree(reorder(BETree, "cladewise"), lwd=1, color="red", xlim=c(0,250), fsize=0.3)
-abline(v=c(166.2-seq(0, 200, 50)), col="red", lty=2)
-abline(v=166.2-65, col="blue", lty=2)
-plotTree(reorder(finalTree,"cladewise"), lwd=1, color="green", xlim=c(0,250), fsize=0.3)
-abline(v=c(max(nodeHeights(finalTree))-seq(0, 200, 50)), col="red", lty=2)
-abline(v=max(nodeHeights(finalTree))-65, col="blue", lty=2)
-plotTree(reorder(meredith, "cladewise"), lwd=1, color="blue", xlim=c(0,250), fsize=0.3)
-abline(v=c(max(nodeHeights(meredith))-seq(0, 200, 50)), col="red", lty=2)
-abline(v=max(nodeHeights(meredith))-65, col="blue", lty=2)
-dev.off()
-
-plot(cophenetic(tree)[lower.tri(cophenetic(tree))]/2,xlim=c(0,100000), ylim=c(0,250))
-points(cophenetic(finalTree)[lower.tri(cophenetic(finalTree))]/2, col="red")
-tmp <- list("BE"=tree, "otBE"=BETree, "Meredith"=meredith, "final"=finalTree)
-class(tmp) <- "multiPhylo"
-mltt.plot(tmp)
-plot(branching.times(tree), table(tree$edge[,1]), ylab="# of Polytomies", xlab="Time (mybp)", pch=21, col="green", bg="green", xlim=c(0, 250))
-points(branching.times(finalTree), table(finalTree$edge[,1]), pch=21, col="red", bg="red")
-
+write.tree(finalTree, "../../output/fullnewmammal.tre")
