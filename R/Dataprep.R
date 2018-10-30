@@ -13,7 +13,7 @@ summary(td)
 traits <- unique(colnames(td$dat))
 traits <- traits[1:86]
 tds <- list() #list is group of unrelated stuff; important
-#[1
+
 for(i in traits){
   .td <- select(td, starts_with(i))
   .td <- filter(.td, !is.na(.td$dat[[1]]), .td$dat[[1]] != 0)
@@ -21,6 +21,7 @@ for(i in traits){
   tds[[i]] <- .td
   print(tds[i])
 }
+?starts_with
 #tmp <- filter(td, !is.na(CALCIUM)) %>% select(., starts_with("CALCIUM")) %>% mutate(.,CALCIUM.log = log(CALCIUM))#allows us to use column names as if they were already saved variables
 # is.na is to filter for data that is true for the na (N/A)
 # 
