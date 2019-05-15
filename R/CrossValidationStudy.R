@@ -1,6 +1,7 @@
 #environment setup
 setwd("~/Desktop/research information/phylopredict/R")
 source("./Dataprep.R")
+source("./CrossValidationStudy.R")
 library(treeplyr)
 library(phylolm)
 
@@ -105,5 +106,6 @@ missing_trait <- list()
       }
 #how to save as a file  
 saveRDS(missing_trait,"../output/CrossValidationResults.RDS")
+
 
  
